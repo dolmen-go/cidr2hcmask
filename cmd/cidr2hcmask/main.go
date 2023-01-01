@@ -17,5 +17,8 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	if net.Bits < 32 {
+		fmt.Println("#", net)
+	}
 	cidr2hcmask.CIDR2HCMaskWrite(net, os.Stdout)
 }
