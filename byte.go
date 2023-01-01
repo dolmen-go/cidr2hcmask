@@ -186,9 +186,12 @@ nextRange:
 		break
 	}
 
-	if end != start {
-		insertRange(start, end, masks...)
-	}
+	/*
+		// The rule for altering our dictionnary still have to be tweaked to avoid too much slicing
+		if len(masks) > 1 {
+			insertRange(start, end, masks...)
+		}
+	*/
 
 	return masks
 }

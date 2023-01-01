@@ -80,4 +80,5 @@ func TestByte4Odd(t *testing.T) {
 			panic("unexpected")
 		}
 	}
+	t.Logf("%v", byteHCMasks)
 }
