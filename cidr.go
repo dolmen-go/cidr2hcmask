@@ -51,23 +51,30 @@ func ParseCIDR(s string) (IPv4Net, error) {
 		if len(ipParts[i]) > 1 && ipParts[i][0] == '0' { // Disallow leading zero
 			return IPv4Net{}, ErrSyntax
 		}
-		n, err = strconv.ParseUint(ipParts[i], 10, 8)
-		if err != nil {
-			return IPv4Net{}, ErrSyntax
-		}
-		if bits >= 8 {
-			net.IP[i] = byte(n)
-			bits -= 8
-		} else if bits > 0 { // 1 to 7 bits
-			mask := (uint64(1) << (8 - bits)) - 1
-			if n&mask != 0 {
+		if bits == 0 {
+			if ipParts[i] != "0" {
+				if _, err = strconv.ParseUint(ipParts[i], 10, 8); err != nil {
+					return IPv4Net{}, ErrSyntax
+				}
 				errBits = true
-				n = n &^ mask
 			}
-			net.IP[i] = byte(n)
-			bits = 0
-		} else if n != 0 {
-			errBits = true
+		} else {
+			n, err = strconv.ParseUint(ipParts[i], 10, 8)
+			if err != nil {
+				return IPv4Net{}, ErrSyntax
+			}
+			if bits >= 8 {
+				net.IP[i] = byte(n)
+				bits -= 8
+			} else { // 1 to 7 bits
+				mask := (uint64(1) << (8 - bits)) - 1
+				if n&mask != 0 {
+					errBits = true
+					n = n &^ mask
+				}
+				net.IP[i] = byte(n)
+				bits = 0
+			}
 		}
 	}
 
