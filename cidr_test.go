@@ -6,8 +6,27 @@ import (
 	"github.com/dolmen-go/cidr2hcmask"
 )
 
+func FuzzParseCIDR(f *testing.F) {
+	for _, tc := range []string{
+		"0.0.0.0/0",
+		"192.168.0.0/24",
+		"10.0.0.0/8",
+	} {
+		f.Add(tc)
+	}
+	f.Fuzz(func(t *testing.T, s string) {
+		net, err := cidr2hcmask.ParseCIDR(s)
+		if err != nil {
+			return
+		}
+		if net.String() != s {
+			t.Fatalf("%q: got %q", s, net.String())
+		}
+	})
+}
+
 func checkCIDR(t *testing.T, cidr string, masks ...string) {
-	t.Log("--[", cidr, "]--git ")
+	t.Log("--[", cidr, "]--")
 	net, err := cidr2hcmask.ParseCIDR(cidr)
 	if err != nil {
 		panic(err)
@@ -34,10 +53,10 @@ func TestCIDR2HCMask(t *testing.T) {
 }
 
 func TestCIDR2HCMaskGroupTens(t *testing.T) {
-	checkCIDR(t, "0.0.0.32/26",
+	checkCIDR(t, "0.0.0.32/27",
 		`01234,012345,123456789,23456789,0.0.0.3?4`,
-		`01234,012345,123456789,45678,0.0.0.?4?d`,
-		`01234,012345,123456789,0.0.0.9?2`,
+		`01234,012345,123456789,45,0.0.0.?4?d`,
+		`01234,012345,123456789,0123,0.0.0.6?4`,
 	)
 	checkCIDR(t, "0.0.0.128/26",
 		`01234,012345,123456789,89,0.0.0.12?4`,

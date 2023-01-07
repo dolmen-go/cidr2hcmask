@@ -17,11 +17,17 @@ func (net IPv4Net) String() string {
 	return fmt.Sprintf("%d.%d.%d.%d/%d", net.IP[0], net.IP[1], net.IP[2], net.IP[3], net.Bits)
 }
 
-var ErrSyntax = errors.New("syntax error")
+var (
+	ErrSyntax      = errors.New("syntax error")
+	ErrNonZeroBits = errors.New("non-zero bits")
+)
 
 func ParseCIDR(s string) (IPv4Net, error) {
 	ipStr, bitsStr, found := strings.Cut(s, "/")
 	if !found {
+		return IPv4Net{}, ErrSyntax
+	}
+	if len(bitsStr) > 1 && bitsStr[0] == '0' { // Disallow leading zero
 		return IPv4Net{}, ErrSyntax
 	}
 	var net IPv4Net
@@ -38,15 +44,36 @@ func ParseCIDR(s string) (IPv4Net, error) {
 	if len(ipParts) != 4 {
 		return IPv4Net{}, ErrSyntax
 	}
+
+	bits := net.Bits
+	errBits := false
 	for i := 0; i < 4; i++ {
+		if len(ipParts[i]) > 1 && ipParts[i][0] == '0' { // Disallow leading zero
+			return IPv4Net{}, ErrSyntax
+		}
 		n, err = strconv.ParseUint(ipParts[i], 10, 8)
 		if err != nil {
 			return IPv4Net{}, ErrSyntax
 		}
-		net.IP[i] = byte(n)
+		if bits >= 8 {
+			net.IP[i] = byte(n)
+			bits -= 8
+		} else if bits > 0 { // 1 to 7 bits
+			mask := (uint64(1) << (8 - bits)) - 1
+			if n&mask != 0 {
+				errBits = true
+				n = n &^ mask
+			}
+			net.IP[i] = byte(n)
+			bits = 0
+		} else if n != 0 {
+			errBits = true
+		}
 	}
 
-	// FIXME check that bits beyond the mask are zeroes
+	if errBits { // Error is delayed until full syntax has been checked
+		return IPv4Net{}, fmt.Errorf("%s: %w (%s expected)", s, ErrNonZeroBits, net)
+	}
 
 	return net, nil
 }
