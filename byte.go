@@ -169,30 +169,10 @@ nextRange:
 		}
 
 		sD, eD := s/10, end/10
-		sU, eU := s%10, end%10 // units
-		if sD < eD {           // are we crossing a tens boundary?
-			// special case for grouping:
-			//  [10, 29] => 12,?4?d
-			//  [10, 39] => 123,?4?d
-			//  [150, 189] => 5678,1?4?d
-			if sU == 0 && s > 10 && end-s >= 19 {
-				b := make([]byte, 0, 9+1+4)
-				for s <= end-9 { // beware of uint8 wrapping
-					b = append(b, '0'+sD%10)
-					sD++
-					s += 10
-				}
-				if sC == 0 {
-					b = append(b, ",?4?d"...)
-				} else {
-					b = append(b, ',', '0'+sC, '?', '4', '?', 'd')
-				}
-				masks = append(masks, string(b))
-			} else {
-				next := (sD + 1) * 10
-				masks = append(masks, lookup(s, next-1)...)
-				s = next
-			}
+		if sD < eD { // are we crossing a tens boundary?
+			next := (sD + 1) * 10
+			masks = append(masks, lookup(s, next-1)...)
+			s = next
 			continue nextRange
 		}
 
@@ -200,6 +180,7 @@ nextRange:
 		if sD > 0 {
 			prefix = strconv.Itoa(int(sD))
 		}
+		sU, eU := s%10, end%10 // units
 		switch sU {
 		case 0:
 			switch eU {
