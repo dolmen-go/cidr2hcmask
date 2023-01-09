@@ -97,11 +97,32 @@ func insertRange(start uint8, end uint8, masks ...string) {
 	byteHCMasks[start].insert(end, masks)
 }
 
+// insertRangesTen handles special grouping cases for tens:
+//
+//	[10, 29] => 12,?4?d
+//	[10, 39] => 123,?4?d
+//	[150, 189] => 5678,1?4?d
+func insertRangesTen(start uint8, end uint8, mask string) {
+	var b [20]byte
+	s := start / 10 % 10
+	e := end / 10 % 10
+	for i := s; i <= e; i++ {
+		b[0] = '0' + i
+		charset := b[:1]
+		insertRange(start, start+9, fmt.Sprintf("%d?d", start/10))
+		for j := i + 1; j <= e; j++ {
+			charset = append(charset, '0'+j)
+			insertRange(start, start+(j-i)*10+9, string(append(append(charset, ','), mask...)))
+		}
+		start += 10
+	}
+}
+
 func init() {
 	insertRange(0, 9, mask0to9)
-	insertRange(10, 99, mask10to99)
-	insertRange(100, 199, mask100to199)
-	insertRange(200, 249, mask200to249)
+	//insertRange(10, 99, mask10to99) // injected by insertRangesTen
+	//insertRange(100, 199, mask100to199) // injected insertRangesTen
+	//insertRange(200, 249, mask200to249) // injected by insertRangesTen
 	insertRange(250, 255, mask250to255)
 
 	insertRange(0, 255, masks0to255...)
@@ -109,6 +130,10 @@ func init() {
 	insertRange(0, 4, mask0to4)
 	insertRange(0, 5, mask0to5)
 	insertRange(1, 9, mask1to9)
+
+	insertRangesTen(10, 90, "?4?d")
+	insertRangesTen(100, 190, "1?4?d")
+	insertRangesTen(200, 240, "1?4?d")
 }
 
 func lookup(start uint8, end uint8) []string {
