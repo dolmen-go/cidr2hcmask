@@ -112,6 +112,9 @@ func insertRangesTen(start uint8, end uint8, mask string) {
 			prefix = strconv.Itoa(int(start) / 10)
 		}
 		insertRange(start, start+9, prefix+mask0to9)
+		insertRange(start, start+4, prefix+mask0to4)
+		insertRange(start, start+5, prefix+mask0to5)
+		insertRange(start+1, start+9, prefix+mask1to9)
 
 		b[0] = '0' + i
 		charset := b[:1]
@@ -124,10 +127,6 @@ func insertRangesTen(start uint8, end uint8, mask string) {
 }
 
 func init() {
-	//insertRange(0, 9, mask0to9) // injected by insertRangesTen
-	//insertRange(10, 99, mask10to99) // injected by insertRangesTen
-	//insertRange(100, 199, mask100to199) // injected insertRangesTen
-	//insertRange(200, 249, mask200to249) // injected by insertRangesTen
 	insertRangesTen(0, 0, "?d")
 	insertRangesTen(10, 90, "?4?d")
 	insertRangesTen(100, 190, "1?4?d")
@@ -136,11 +135,6 @@ func init() {
 	insertRange(250, 255, mask250to255)
 
 	insertRange(0, 255, masks0to255...)
-
-	insertRange(0, 4, mask0to4)
-	insertRange(0, 5, mask0to5)
-	insertRange(1, 9, mask1to9)
-
 }
 
 func lookup(start uint8, end uint8) []string {
