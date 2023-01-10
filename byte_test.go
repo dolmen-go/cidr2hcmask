@@ -82,3 +82,33 @@ func TestByte4Odd(t *testing.T) {
 	}
 	t.Logf("%v", byteHCMasks)
 }
+
+var benchmarkBitRangesMasks []string
+
+// BenchmarkByteBitRanges benchmarks the calls of lookup used for CIDR2HCMask.
+func BenchmarkByteBitRanges(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for w := 1; w <= 128; w <<= 1 {
+			for s := int(0); s < 256; s += w {
+				benchmarkBitRangesMasks = lookup(uint8(s), uint8(s+w-1))
+			}
+		}
+	}
+}
+
+func TestByteBitRanges(t *testing.T) {
+	for w := 1; w <= 128; w <<= 1 {
+		for s := int(0); s < 256; s += w {
+			t.Log(s, s+w-1)
+			masks := lookup(uint8(s), uint8(s+w-1))
+			for _, m := range masks {
+				t.Log(" ", m)
+			}
+		}
+	}
+}
+
+func TestByteBitRange224To255(t *testing.T) {
+	benchmarkBitRangesMasks = lookup(224, 255)
+}

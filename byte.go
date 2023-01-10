@@ -152,7 +152,7 @@ nextRange:
 			//  [150, 189] => 5678,1?4?d
 			if sU == 0 && s > 10 && end-s >= 19 {
 				b := make([]byte, 0, 9+1+4)
-				for s+9 <= end {
+				for s <= end-9 { // beware of uint8 wrapping
 					b = append(b, '0'+sD%10)
 					sD++
 					s += 10
