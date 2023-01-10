@@ -34,17 +34,17 @@ var masks0to255 = []string{
 	mask0to9,
 }
 
-type rangeMasks struct {
-	E     uint8 // end of range
-	Masks []string
+type rangeMask struct {
+	E    uint8 // end of range
+	Mask string
 }
 
-// rangesMasks are lists of masks by end of range boundary for a common start boundary.
+// rangesMask are lists of masks by end of range boundary for a common start boundary.
 //
 // ranges are sorted by descending order (see [rangesMasks.Less]).
-type rangesMasks []rangeMasks
+type rangesMask []rangeMask
 
-func (rr rangesMasks) index(E uint8) int {
+func (rr rangesMask) index(E uint8) int {
 	for i := 0; i < len(rr) && rr[i].E >= E; i++ {
 		if rr[i].E == E {
 			return i
@@ -53,48 +53,48 @@ func (rr rangesMasks) index(E uint8) int {
 	return -1
 }
 
-func (rr rangesMasks) lookup(E uint8) []string {
+func (rr rangesMask) lookup(E uint8) string {
 	for i := 0; i < len(rr) && rr[i].E >= E; i++ {
 		if rr[i].E == E {
-			return rr[i].Masks
+			return rr[i].Mask
 		}
 	}
-	return nil
+	return ""
 }
 
-func (rr *rangesMasks) insert(end uint8, masks []string) {
+func (rr *rangesMask) insert(end uint8, mask string) {
 	if *rr == nil {
-		*rr = rangesMasks{{E: end, Masks: masks}}
+		*rr = rangesMask{{E: end, Mask: mask}}
 		return
 	}
 	if rr.index(end) != -1 {
-		panic(fmt.Errorf("duplicate insert: %d %v", end, masks))
+		panic(fmt.Errorf("duplicate insert: %d %v", end, mask))
 		// return
 	}
-	(*rr) = append(*rr, rangeMasks{E: end, Masks: masks})
+	(*rr) = append(*rr, rangeMask{E: end, Mask: mask})
 	sort.Sort(*rr)
 }
 
 // Len implements [sort.Interface].
-func (rr rangesMasks) Len() int {
+func (rr rangesMask) Len() int {
 	return len(rr)
 }
 
 // Less implements [sort.Interface].
-func (rr rangesMasks) Less(i, j int) bool {
+func (rr rangesMask) Less(i, j int) bool {
 	// Ranges are sorted in descending order of end
 	return rr[i].E > rr[j].E
 }
 
 // Swap implements [sort.Interface].
-func (rr rangesMasks) Swap(i, j int) {
+func (rr rangesMask) Swap(i, j int) {
 	rr[i], rr[j] = rr[j], rr[i]
 }
 
-var byteHCMasks [256]rangesMasks
+var byteHCMasks [256]rangesMask
 
-func insertRange(start uint8, end uint8, masks ...string) {
-	byteHCMasks[start].insert(end, masks)
+func insertRange(start uint8, end uint8, mask string) {
+	byteHCMasks[start].insert(end, mask)
 }
 
 // insertRangesTen handles special grouping cases for tens:
@@ -136,8 +136,6 @@ func init() {
 	insertRangesTen(200, 240, "2?4?d")
 
 	insertRange(250, 255, mask250to255)
-
-	insertRange(0, 255, masks0to255...)
 }
 
 func lookup(start uint8, end uint8) []string {
@@ -153,12 +151,12 @@ nextRange:
 		masksByEnd := byteHCMasks[s]
 		for i := 0; i < len(masksByEnd); i++ {
 			if masksByEnd[i].E == end {
-				masks = append(masks, masksByEnd[i].Masks...)
+				masks = append(masks, masksByEnd[i].Mask)
 				// s = end+1
 				break nextRange
 			}
 			if masksByEnd[i].E < end {
-				masks = append(masks, masksByEnd[i].Masks...)
+				masks = append(masks, masksByEnd[i].Mask)
 				s = masksByEnd[i].E + 1
 				continue nextRange
 			}
@@ -214,13 +212,6 @@ nextRange:
 		masks = append(masks, string(b))
 		break
 	}
-
-	/*
-		// The rule for altering our dictionnary still have to be tweaked to avoid too much slicing
-		if len(masks) > 1 {
-			insertRange(start, end, masks...)
-		}
-	*/
 
 	return masks
 }
