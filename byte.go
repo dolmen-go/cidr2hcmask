@@ -107,13 +107,14 @@ func insertRangesTen(start uint8, end uint8, mask string) {
 	s := start / 10 % 10
 	e := end / 10 % 10
 	for i := s; i <= e; i++ {
+		var prefix string
+		if start > 0 {
+			prefix = strconv.Itoa(int(start) / 10)
+		}
+		insertRange(start, start+9, prefix+mask0to9)
+
 		b[0] = '0' + i
 		charset := b[:1]
-		if start > 0 {
-			insertRange(start, start+9, fmt.Sprintf("%d?d", start/10))
-		} else {
-			insertRange(start, start+9, mask)
-		}
 		for j := i + 1; j <= e; j++ {
 			charset = append(charset, '0'+j)
 			insertRange(start, start+(j-i)*10+9, string(append(append(charset, ','), mask...)))
