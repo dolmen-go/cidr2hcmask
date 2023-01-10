@@ -109,7 +109,11 @@ func insertRangesTen(start uint8, end uint8, mask string) {
 	for i := s; i <= e; i++ {
 		b[0] = '0' + i
 		charset := b[:1]
-		insertRange(start, start+9, fmt.Sprintf("%d?d", start/10))
+		if start > 0 {
+			insertRange(start, start+9, fmt.Sprintf("%d?d", start/10))
+		} else {
+			insertRange(start, start+9, mask)
+		}
 		for j := i + 1; j <= e; j++ {
 			charset = append(charset, '0'+j)
 			insertRange(start, start+(j-i)*10+9, string(append(append(charset, ','), mask...)))
@@ -119,10 +123,15 @@ func insertRangesTen(start uint8, end uint8, mask string) {
 }
 
 func init() {
-	insertRange(0, 9, mask0to9)
+	//insertRange(0, 9, mask0to9) // injected by insertRangesTen
 	//insertRange(10, 99, mask10to99) // injected by insertRangesTen
 	//insertRange(100, 199, mask100to199) // injected insertRangesTen
 	//insertRange(200, 249, mask200to249) // injected by insertRangesTen
+	insertRangesTen(0, 0, "?d")
+	insertRangesTen(10, 90, "?4?d")
+	insertRangesTen(100, 190, "1?4?d")
+	insertRangesTen(200, 240, "2?4?d")
+
 	insertRange(250, 255, mask250to255)
 
 	insertRange(0, 255, masks0to255...)
@@ -131,9 +140,6 @@ func init() {
 	insertRange(0, 5, mask0to5)
 	insertRange(1, 9, mask1to9)
 
-	insertRangesTen(10, 90, "?4?d")
-	insertRangesTen(100, 190, "1?4?d")
-	insertRangesTen(200, 240, "1?4?d")
 }
 
 func lookup(start uint8, end uint8) []string {
