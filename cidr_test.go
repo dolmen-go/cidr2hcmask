@@ -155,4 +155,10 @@ func TestCIDR2HCMaskAll(t *testing.T) {
 	}
 
 	t.Log(patternsCount, "patterns.")
+	const patternsCountExpected = 1725
+	if patternsCount > patternsCountExpected {
+		t.Errorf("Regression in the count of patterns produced: got %d, expected %d", patternsCount, patternsCountExpected)
+	} else if patternsCount < patternsCountExpected {
+		t.Logf("Unexpected low count of patterns produced: got %d, expected %d", patternsCount, patternsCountExpected)
+	}
 }
