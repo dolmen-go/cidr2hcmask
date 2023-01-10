@@ -117,12 +117,12 @@ func insertRangesTen(start uint8, end uint8, mask string) {
 		if start > 0 {
 			prefix = strconv.Itoa(int(start) / 10)
 		}
+		// This a special case where we use the ?d charset
 		insertRange(start, start+9, prefix+mask0to9)
 
-		// This case is needed to ensure mask0to5 is not selected as an intermediate step.
-		// If absent we would get 2 patterns: "<prefix>?2" and "67,<prefix>?4"
 		insertRange(start, start+7, "01234567,"+prefix+"?4")
 
+		// This a special case where we reuse the 012345 charset (?2)
 		insertRange(start, start+5, prefix+mask0to5)
 
 		insertRange(start, start+3, "0123,"+prefix+"?4")
@@ -186,36 +186,7 @@ nextRange:
 			}
 		}
 
-		sC, eC := s/100, end/100
-		if sC < eC { // are we crossing a hundreds boundary?
-			next := (sC + 1) * 100
-			masks = append(masks, lookup(s, next-1)...)
-			s = next
-			continue nextRange
-		}
-
-		sD, eD := s/10, end/10
-		if sD < eD { // are we crossing a tens boundary?
-			next := (sD + 1) * 10
-			masks = append(masks, lookup(s, next-1)...)
-			s = next
-			continue nextRange
-		}
-
-		var prefix string
-		if sD > 0 {
-			prefix = strconv.Itoa(int(sD))
-		}
-		sU, eU := s%10, end%10 // units
-
-		b := make([]byte, 0, int(eU-sU+1)+1+len(prefix)+2)
-		for sU <= eU {
-			b = append(b, byte('0'+sU))
-			sU++
-		}
-		b = append(append(append(b, ','), prefix...), "?4"...)
-		masks = append(masks, string(b))
-		break
+		panic("unhandled case: we have a hole in the byte ranges table")
 	}
 
 	return masks
