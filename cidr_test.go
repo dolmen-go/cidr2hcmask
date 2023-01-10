@@ -11,9 +11,15 @@ import (
 
 func FuzzParseCIDR(f *testing.F) {
 	for _, tc := range []string{
+		// Valid
 		"0.0.0.0/0",
 		"192.168.0.0/24",
 		"10.0.0.0/8",
+		// Invalid
+		"00.0.0.0/0",
+		"0.0.0.00/0",
+		"0.0.0.0/00",
+		"1.2.3.4.5/0",
 	} {
 		f.Add(tc)
 	}
