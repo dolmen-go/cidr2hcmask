@@ -162,32 +162,24 @@ func init() {
 	insertRange(254, 255, "45,25?4")
 }
 
-func lookup(start uint8, end uint8) []string {
-	var masks []string
-	s := start
-
+func lookup(start uint8, end uint8) (masks []string) {
 nextRange:
-	for s <= end {
-		if s == end {
-			masks = append(masks, strconv.Itoa(int(start)))
-			break
+	for {
+		if start == end {
+			return append(masks, strconv.Itoa(int(start)))
 		}
-		masksByEnd := byteHCMasks[s]
+		masksByEnd := byteHCMasks[start]
 		for i := 0; i < len(masksByEnd); i++ {
 			if masksByEnd[i].E == end {
-				masks = append(masks, masksByEnd[i].Mask)
-				// s = end+1
-				break nextRange
+				return append(masks, masksByEnd[i].Mask)
 			}
 			if masksByEnd[i].E < end {
 				masks = append(masks, masksByEnd[i].Mask)
-				s = masksByEnd[i].E + 1
+				start = masksByEnd[i].E + 1
 				continue nextRange
 			}
 		}
 
 		panic("unhandled case: we have a hole in the byte ranges table")
 	}
-
-	return masks
 }
