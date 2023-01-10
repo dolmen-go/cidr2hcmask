@@ -112,9 +112,12 @@ func insertRangesTen(start uint8, end uint8, mask string) {
 			prefix = strconv.Itoa(int(start) / 10)
 		}
 		insertRange(start, start+9, prefix+mask0to9)
-		insertRange(start, start+4, prefix+mask0to4)
-		insertRange(start, start+5, prefix+mask0to5)
-		insertRange(start+1, start+9, prefix+mask1to9)
+		/*
+			// The dynamic code gives more compact output
+			insertRange(start, start+4, prefix+mask0to4)
+			insertRange(start, start+5, prefix+mask0to5)
+			insertRange(start+1, start+9, prefix+mask1to9)
+		*/
 
 		b[0] = '0' + i
 		charset := b[:1]
