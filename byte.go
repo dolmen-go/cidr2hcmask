@@ -44,24 +44,6 @@ type rangeMask struct {
 // ranges are sorted by descending order (see [rangesMasks.Less]).
 type rangesMask []rangeMask
 
-func (rr rangesMask) index(E uint8) int {
-	for i := 0; i < len(rr) && rr[i].E >= E; i++ {
-		if rr[i].E == E {
-			return i
-		}
-	}
-	return -1
-}
-
-func (rr rangesMask) lookup(E uint8) string {
-	for i := 0; i < len(rr) && rr[i].E >= E; i++ {
-		if rr[i].E == E {
-			return rr[i].Mask
-		}
-	}
-	return ""
-}
-
 func (rr *rangesMask) insert(end uint8, mask string) {
 	if end&1 == 0 {
 		panic("end must be even")
@@ -70,10 +52,14 @@ func (rr *rangesMask) insert(end uint8, mask string) {
 		*rr = rangesMask{{E: end, Mask: mask}}
 		return
 	}
-	if rr.index(end) != -1 {
-		panic(fmt.Errorf("duplicate insert: %d %v", end, mask))
-		// return
+
+	// Safety check
+	for i := 0; i < len(*rr) && (*rr)[i].E >= end; i++ {
+		if (*rr)[i].E == end {
+			panic(fmt.Errorf("duplicate insert: %d %v", end, mask))
+		}
 	}
+
 	(*rr) = append(*rr, rangeMask{E: end, Mask: mask})
 	sort.Sort(*rr)
 }
