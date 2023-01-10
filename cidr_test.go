@@ -1,6 +1,7 @@
 package cidr2hcmask_test
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -32,6 +33,43 @@ func FuzzParseCIDR(f *testing.F) {
 			t.Fatalf("%q: got %q", s, net.String())
 		}
 	})
+}
+
+func TestParseCIDRErrSyntax(t *testing.T) {
+	for _, tc := range []string{
+		"1.2.3.4",
+		"1.2.3.4/",
+		"1.2.3.4/a",
+		"1.2.3.4/33",
+		"1.2.3./32",
+		".../32",
+		"1.2.3.256/0",
+		"1.2.3.04/32",
+		"1.2.3.4/032",
+	} {
+		_, err := cidr2hcmask.ParseCIDR(tc)
+		if err == nil {
+			t.Errorf("%q: error expected", tc)
+		} else if !errors.Is(err, cidr2hcmask.ErrSyntax) {
+			t.Errorf("%q: ErrSyntax expected, got %q", tc, err)
+		}
+	}
+}
+
+func TestParseCIDRErrNonZeroBits(t *testing.T) {
+	for _, tc := range []string{
+		"192.168.0.1/16",
+		"192.168.0.1/31",
+		"0.0.0.1/0",
+		"128.0.0.0/0",
+	} {
+		_, err := cidr2hcmask.ParseCIDR(tc)
+		if err == nil {
+			t.Errorf("%q: error expected", tc)
+		} else if !errors.Is(err, cidr2hcmask.ErrNonZeroBits) {
+			t.Errorf("%q: ErrNonZeroBits expected, got %q", tc, err)
+		}
+	}
 }
 
 func checkCIDR(t *testing.T, cidr string, masks ...string) {
