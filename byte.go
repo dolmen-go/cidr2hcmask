@@ -34,183 +34,138 @@ var masks0to255 = []string{
 	mask0to9,
 }
 
-type rangeMasks struct {
-	E     uint8 // end of range
-	Masks []string
+type rangeMask struct {
+	E    uint8 // end of range
+	Mask string
 }
 
-// rangesMasks are lists of masks by end of range boundary for a common start boundary.
+// rangesMask are lists of masks by end of range boundary for a common start boundary.
 //
 // ranges are sorted by descending order (see [rangesMasks.Less]).
-type rangesMasks []rangeMasks
+type rangesMask []rangeMask
 
-func (rr rangesMasks) index(E uint8) int {
-	for i := 0; i < len(rr) && rr[i].E >= E; i++ {
-		if rr[i].E == E {
-			return i
-		}
+func (rr *rangesMask) insert(end uint8, mask string) {
+	if end&1 == 0 {
+		panic("end must be even")
 	}
-	return -1
-}
-
-func (rr rangesMasks) lookup(E uint8) []string {
-	for i := 0; i < len(rr) && rr[i].E >= E; i++ {
-		if rr[i].E == E {
-			return rr[i].Masks
-		}
-	}
-	return nil
-}
-
-func (rr *rangesMasks) insert(end uint8, masks []string) {
 	if *rr == nil {
-		*rr = rangesMasks{{E: end, Masks: masks}}
+		*rr = rangesMask{{E: end, Mask: mask}}
 		return
 	}
-	if rr.index(end) != -1 {
-		panic(fmt.Errorf("duplicate insert: %d %v", end, masks))
-		// return
+
+	// Safety check
+	for i := 0; i < len(*rr) && (*rr)[i].E >= end; i++ {
+		if (*rr)[i].E == end {
+			panic(fmt.Errorf("duplicate insert: %d %v", end, mask))
+		}
 	}
-	(*rr) = append(*rr, rangeMasks{E: end, Masks: masks})
+
+	(*rr) = append(*rr, rangeMask{E: end, Mask: mask})
 	sort.Sort(*rr)
 }
 
 // Len implements [sort.Interface].
-func (rr rangesMasks) Len() int {
+func (rr rangesMask) Len() int {
 	return len(rr)
 }
 
 // Less implements [sort.Interface].
-func (rr rangesMasks) Less(i, j int) bool {
+func (rr rangesMask) Less(i, j int) bool {
 	// Ranges are sorted in descending order of end
 	return rr[i].E > rr[j].E
 }
 
 // Swap implements [sort.Interface].
-func (rr rangesMasks) Swap(i, j int) {
+func (rr rangesMask) Swap(i, j int) {
 	rr[i], rr[j] = rr[j], rr[i]
 }
 
-var byteHCMasks [256]rangesMasks
+var byteHCMasks [256]rangesMask
 
-func insertRange(start uint8, end uint8, masks ...string) {
-	byteHCMasks[start].insert(end, masks)
+func insertRange(start uint8, end uint8, mask string) {
+	if end <= start {
+		panic("end must be above start")
+	}
+	byteHCMasks[start].insert(end, mask)
+}
+
+// insertRangesTen handles special grouping cases for tens:
+//
+//	[10, 29] => 12,?4?d
+//	[10, 39] => 123,?4?d
+//	[150, 189] => 5678,1?4?d
+func insertRangesTen(start uint8, end uint8, mask string) {
+	var b [20]byte
+	s := start / 10 % 10
+	e := end / 10 % 10
+	for i := s; i <= e; i++ {
+		var prefix string
+		if start > 0 {
+			prefix = strconv.Itoa(int(start) / 10)
+		}
+		// This a special case where we use the ?d charset
+		insertRange(start, start+9, prefix+mask0to9)
+
+		insertRange(start, start+7, "01234567,"+prefix+"?4")
+
+		// This a special case where we reuse the 012345 charset (?2)
+		insertRange(start, start+5, prefix+mask0to5)
+
+		insertRange(start, start+3, "0123,"+prefix+"?4")
+		insertRange(start, start+1, "01,"+prefix+"?4")
+
+		for j := uint8(2); j <= 8; j += 2 {
+			b := make([]byte, 0, 20)
+
+			for k := j + 1; k <= 9; k += 2 {
+				b = append(b, '0'+k-1, '0'+k)
+				insertRange(start+j, start+k, string(append(append(append(b, ','), prefix...), "?4"...)))
+			}
+		}
+
+		b[0] = '0' + i
+		charset := b[:1]
+		for j := i + 1; j <= e; j++ {
+			charset = append(charset, '0'+j)
+			insertRange(start, start+(j-i)*10+9, string(append(append(charset, ','), mask...)))
+		}
+		start += 10
+	}
 }
 
 func init() {
-	insertRange(0, 9, mask0to9)
-	insertRange(10, 99, mask10to99)
-	insertRange(100, 199, mask100to199)
-	insertRange(200, 249, mask200to249)
+	insertRangesTen(0, 0, "?d")
+	insertRangesTen(10, 90, "?4?d")
+	insertRangesTen(100, 190, "1?4?d")
+	insertRangesTen(200, 240, "2?4?d")
+
+	// Special cases to handle [250, 255]
+	insertRange(250, 251, "01,25?4")
+	insertRange(250, 253, "0123,25?4")
 	insertRange(250, 255, mask250to255)
-
-	insertRange(0, 255, masks0to255...)
-
-	insertRange(0, 4, mask0to4)
-	insertRange(0, 5, mask0to5)
-	insertRange(1, 9, mask1to9)
+	insertRange(252, 253, "23,25?4")
+	insertRange(252, 255, "2345,25?4")
+	insertRange(254, 255, "45,25?4")
 }
 
-func lookup(start uint8, end uint8) []string {
-	var masks []string
-	s := start
-
+func lookup(start uint8, end uint8) (masks []string) {
 nextRange:
-	for s <= end {
-		if s == end {
-			masks = append(masks, strconv.Itoa(int(start)))
-			break
+	for {
+		if start == end {
+			return append(masks, strconv.Itoa(int(start)))
 		}
-		masksByEnd := byteHCMasks[s]
+		masksByEnd := byteHCMasks[start]
 		for i := 0; i < len(masksByEnd); i++ {
 			if masksByEnd[i].E == end {
-				masks = append(masks, masksByEnd[i].Masks...)
-				// s = end+1
-				break nextRange
+				return append(masks, masksByEnd[i].Mask)
 			}
 			if masksByEnd[i].E < end {
-				masks = append(masks, masksByEnd[i].Masks...)
-				s = masksByEnd[i].E + 1
+				masks = append(masks, masksByEnd[i].Mask)
+				start = masksByEnd[i].E + 1
 				continue nextRange
 			}
 		}
 
-		sC, eC := s/100, end/100
-		if sC < eC { // are we crossing a hundreds boundary?
-			next := (sC + 1) * 100
-			masks = append(masks, lookup(s, next-1)...)
-			s = next
-			continue nextRange
-		}
-
-		sD, eD := s/10, end/10
-		sU, eU := s%10, end%10 // units
-		if sD < eD {           // are we crossing a tens boundary?
-			// special case for grouping:
-			//  [10, 29] => 12,?4?d
-			//  [10, 39] => 123,?4?d
-			//  [150, 189] => 5678,1?4?d
-			if sU == 0 && s > 10 && end-s >= 19 {
-				b := make([]byte, 0, 9+1+4)
-				for s <= end-9 { // beware of uint8 wrapping
-					b = append(b, '0'+sD%10)
-					sD++
-					s += 10
-				}
-				if sC == 0 {
-					b = append(b, ",?4?d"...)
-				} else {
-					b = append(b, ',', '0'+sC, '?', '4', '?', 'd')
-				}
-				masks = append(masks, string(b))
-			} else {
-				next := (sD + 1) * 10
-				masks = append(masks, lookup(s, next-1)...)
-				s = next
-			}
-			continue nextRange
-		}
-
-		var prefix string
-		if sD > 0 {
-			prefix = strconv.Itoa(int(sD))
-		}
-		switch sU {
-		case 0:
-			switch eU {
-			case 9:
-				masks = append(masks, prefix+mask0to9)
-				break nextRange
-			case 5:
-				masks = append(masks, prefix+mask0to5)
-				break nextRange
-			case 4:
-				masks = append(masks, prefix+mask0to4)
-				break nextRange
-			}
-		case 1:
-			if eU == 9 {
-				masks = append(masks, prefix+mask1to9)
-				break nextRange
-			}
-		}
-
-		b := make([]byte, 0, int(eU-sU+1)+1+len(prefix)+2)
-		for sU <= eU {
-			b = append(b, byte('0'+sU))
-			sU++
-		}
-		b = append(append(append(b, ','), prefix...), "?4"...)
-		masks = append(masks, string(b))
-		break
+		panic("unhandled case: we have a hole in the byte ranges table")
 	}
-
-	/*
-		// The rule for altering our dictionnary still have to be tweaked to avoid too much slicing
-		if len(masks) > 1 {
-			insertRange(start, end, masks...)
-		}
-	*/
-
-	return masks
 }

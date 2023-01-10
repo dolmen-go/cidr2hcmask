@@ -89,7 +89,7 @@ func cidr2hcmask(net IPv4Net) [4][]string {
 	bits := net.Bits
 	var masks [4][]string
 	i := 0
-	for i < 4 && bits > 8 {
+	for i < 4 && bits >= 8 {
 		masks[i] = []string{strconv.Itoa(int(net.IP[i]))}
 		bits -= 8
 		i++

@@ -80,6 +80,9 @@ func TestByte4Odd(t *testing.T) {
 			panic("unexpected")
 		}
 	}
+}
+
+func TestByteDumpTable(t *testing.T) {
 	t.Logf("%v", byteHCMasks)
 }
 
