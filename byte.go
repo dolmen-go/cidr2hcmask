@@ -114,9 +114,9 @@ func insertRangesTen(start uint8, end uint8, mask string) {
 		insertRange(start, start+9, prefix+mask0to9)
 		/*
 			// The dynamic code gives more compact output
-			insertRange(start, start+4, prefix+mask0to4)
+			insertRange(start, start+4, prefix+mask0to4) // never used as masks of more than 1 IP end at even values
 			insertRange(start, start+5, prefix+mask0to5)
-			insertRange(start+1, start+9, prefix+mask1to9)
+			insertRange(start+1, start+9, prefix+mask1to9) // never used as masks of more than 1 IP start at odd values
 		*/
 
 		b[0] = '0' + i
@@ -183,24 +183,33 @@ nextRange:
 			prefix = strconv.Itoa(int(sD))
 		}
 		sU, eU := s%10, end%10 // units
-		switch sU {
-		case 0:
-			switch eU {
-			case 9:
-				masks = append(masks, prefix+mask0to9)
-				break nextRange
-			case 5:
-				masks = append(masks, prefix+mask0to5)
-				break nextRange
-			case 4:
-				masks = append(masks, prefix+mask0to4)
-				break nextRange
+		/*
+			// This is the general handling optimized to reuse charsets which are used for [0, 255] ranges.
+			// However for cidr2hcmask we are only using odd ranges, so [0, 4] and [1, 9] are never used for our purpose.
+			switch sU {
+			case 0:
+				switch eU {
+				case 9: // This case is already handled in insertRangesTen
+					masks = append(masks, prefix+mask0to9)
+					break nextRange
+				case 5:
+					masks = append(masks, prefix+mask0to5)
+					break nextRange
+				case 4: // Never used for last digit for CIDR
+					masks = append(masks, prefix+mask0to4)
+					break nextRange
+				}
+			case 1: // Never used for last digit for CIDR
+				if eU == 9 {
+					masks = append(masks, prefix+mask1to9)
+					break nextRange
+				}
 			}
-		case 1:
-			if eU == 9 {
-				masks = append(masks, prefix+mask1to9)
-				break nextRange
-			}
+		*/
+		// This is the simplified version of the double switch above.
+		if sU == 0 && eU == 5 {
+			masks = append(masks, prefix+mask0to5)
+			break
 		}
 
 		b := make([]byte, 0, int(eU-sU+1)+1+len(prefix)+2)
