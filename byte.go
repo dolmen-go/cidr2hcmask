@@ -63,6 +63,9 @@ func (rr rangesMask) lookup(E uint8) string {
 }
 
 func (rr *rangesMask) insert(end uint8, mask string) {
+	if end&1 == 0 {
+		panic("end must be even")
+	}
 	if *rr == nil {
 		*rr = rangesMask{{E: end, Mask: mask}}
 		return
@@ -94,6 +97,9 @@ func (rr rangesMask) Swap(i, j int) {
 var byteHCMasks [256]rangesMask
 
 func insertRange(start uint8, end uint8, mask string) {
+	if end <= start {
+		panic("end must be above start")
+	}
 	byteHCMasks[start].insert(end, mask)
 }
 
@@ -119,6 +125,18 @@ func insertRangesTen(start uint8, end uint8, mask string) {
 
 		insertRange(start, start+5, prefix+mask0to5)
 
+		insertRange(start, start+3, "0123,"+prefix+"?4")
+		insertRange(start, start+1, "01,"+prefix+"?4")
+
+		for j := uint8(2); j <= 8; j += 2 {
+			b := make([]byte, 0, 20)
+
+			for k := j + 1; k <= 9; k += 2 {
+				b = append(b, '0'+k-1, '0'+k)
+				insertRange(start+j, start+k, string(append(append(append(b, ','), prefix...), "?4"...)))
+			}
+		}
+
 		b[0] = '0' + i
 		charset := b[:1]
 		for j := i + 1; j <= e; j++ {
@@ -135,7 +153,13 @@ func init() {
 	insertRangesTen(100, 190, "1?4?d")
 	insertRangesTen(200, 240, "2?4?d")
 
+	// Special cases to handle [250, 255]
+	insertRange(250, 251, "01,25?4")
+	insertRange(250, 253, "0123,25?4")
 	insertRange(250, 255, mask250to255)
+	insertRange(252, 253, "23,25?4")
+	insertRange(252, 255, "2345,25?4")
+	insertRange(254, 255, "45,25?4")
 }
 
 func lookup(start uint8, end uint8) []string {
