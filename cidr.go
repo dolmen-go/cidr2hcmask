@@ -23,6 +23,9 @@ var (
 )
 
 func ParseCIDR(s string) (IPv4Net, error) {
+	if len(s) > (3+1+3+1+3+1+3)+1+(2) {
+		return IPv4Net{}, ErrSyntax
+	}
 	ipStr, bitsStr, found := strings.Cut(s, "/")
 	if !found {
 		return IPv4Net{}, ErrSyntax
@@ -40,7 +43,7 @@ func ParseCIDR(s string) (IPv4Net, error) {
 	}
 	net.Bits = int(n)
 
-	ipParts := strings.Split(ipStr, ".")
+	ipParts := strings.SplitN(ipStr, ".", 5)
 	if len(ipParts) != 4 {
 		return IPv4Net{}, ErrSyntax
 	}

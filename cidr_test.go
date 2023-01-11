@@ -37,6 +37,7 @@ func FuzzParseCIDR(f *testing.F) {
 
 func TestParseCIDRErrSyntax(t *testing.T) {
 	for _, tc := range []string{
+		"1111111111111111111/32",
 		"1.2.3.4",
 		"1.2.3.4/",
 		"1.2.3.4/a",
