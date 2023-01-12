@@ -1,3 +1,7 @@
+// Package cidr2hcmask provides utilities to convert a network address in CIDR notation
+// into a [Hashcat mask file].
+//
+// [Hashcat mask file]: https://hashcat.net/wiki/doku.php?id=mask_attack#hashcat_mask_files
 package cidr2hcmask
 
 import (
@@ -8,20 +12,30 @@ import (
 	"strings"
 )
 
+// IPv4Net represents a block of IPv4 addresses using a base IP address and a count of bits.
 type IPv4Net struct {
 	IP   [4]byte
 	Bits int
 }
 
+// String uses the CIDR format <ip>/<bits>.
+//
+// String implements interface [fmt.Stringer].
 func (net IPv4Net) String() string {
 	return fmt.Sprintf("%d.%d.%d.%d/%d", net.IP[0], net.IP[1], net.IP[2], net.IP[3], net.Bits)
 }
 
 var (
-	ErrSyntax      = errors.New("syntax error")
-	ErrNonZeroBits = errors.New("non-zero bits")
+	ErrSyntax      = errors.New("syntax error")  // CDIR format error
+	ErrNonZeroBits = errors.New("non-zero bits") // CDIR format error: the IP part is not canonical
 )
 
+// ParseCIDR parses an IPv4 network address in CIDR notation.
+// See https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing#CIDR_notation.
+//
+// Exemple value: 192.168.2.0/24.
+//
+// Errors returned (check with [errors.Is]): [ErrSyntax], [ErrNonZeroBits]
 func ParseCIDR(s string) (IPv4Net, error) {
 	if len(s) > (3+1+3+1+3+1+3)+1+(2) {
 		return IPv4Net{}, ErrSyntax
