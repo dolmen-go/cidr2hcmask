@@ -119,6 +119,7 @@ func checkCIDRExpand(t *testing.T, cidr string, visit func([]byte)) {
 	if err != nil {
 		panic(err)
 	}
+	// cidr2hcmask.CIDR2HCMaskFunc(net, cidr2hcmask.CompactMaskFunc(func(mask string) {
 	cidr2hcmask.CIDR2HCMaskFunc(net, func(mask string) {
 		t.Log("[", mask, "]")
 		HCMaskExpand(mask, visit)
