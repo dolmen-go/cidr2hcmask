@@ -3,6 +3,7 @@ package cidr2hcmask_test
 import (
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"testing"
@@ -88,6 +89,34 @@ func checkCIDR(t *testing.T, cidr string, masks ...string) {
 	if len(masks) > 0 {
 		t.Error("expected", len(masks), "more masks")
 	}
+}
+
+func ExampleCIDR2HCMaskFunc() {
+	net, err := cidr2hcmask.ParseCIDR("192.168.1.0/28")
+	if err != nil {
+		panic(err)
+	}
+
+	cidr2hcmask.CIDR2HCMaskFunc(net, func(mask string) {
+		fmt.Println(mask)
+	})
+
+	// Output:
+	// 01234,012345,123456789,192.168.1.?d
+	// 01234,012345,123456789,192.168.1.1?2
+}
+
+func ExampleCIDR2HCMaskWrite() {
+	net, err := cidr2hcmask.ParseCIDR("192.168.1.0/28")
+	if err != nil {
+		panic(err)
+	}
+
+	cidr2hcmask.CIDR2HCMaskWrite(net, os.Stdout)
+
+	// Output:
+	// 01234,012345,123456789,192.168.1.?d
+	// 01234,012345,123456789,192.168.1.1?2
 }
 
 func TestCIDR2HCMask(t *testing.T) {
